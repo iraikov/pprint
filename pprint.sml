@@ -122,7 +122,7 @@ sig
     val option : ('a -> representation) -> 'a option -> representation
     val list : ('a -> representation) -> 'a list -> representation
     val array : ('a -> representation) -> 'a array -> representation
-    val ref : ('a -> representation) -> 'a ref -> representation
+    val ref_ : ('a -> representation) -> 'a ref -> representation
 
     (* Value representation for any other value. *)
     val unknown : type_name -> 'a -> representation
@@ -130,7 +130,7 @@ end
 
 (* ------------------------------------------------------------------------- *) 
 
-(* An implementation of the above interface, based on TextIO.  *) 
+(* An implementation of the OUTPUT interface, based on TextIO.  *) 
 
 structure ChannelOutput : OUTPUT =
 struct
@@ -223,10 +223,10 @@ datatype document =
 val empty = Empty
 
 fun ^^ (x, y) =
-  case (x, y) of
-      (Empty, x) => x
-    | (x, Empty) => x
-    | (_, _) =>  Cat (x, y)
+    (case (x, y) of
+         (Empty, x) => x
+       | (x, Empty) => x
+       | (_, _) =>  Cat (x, y))
 
 infix ^^
 
@@ -312,7 +312,7 @@ val underscore      = char #"_"
 val bang            = char #"!"
 val bar             = char #"|"
 
-fun break i      = ifflat (text (makeString #" "i)) hardline
+fun break i      = ifflat (text (makeString #" " i)) hardline
 val break0       = ifflat empty hardline
 val break1       = ifflat space hardline
 
@@ -646,7 +646,7 @@ functor PPrintRenderer (Output : OUTPUT) =
                              
                | (HardLine, flattening) =>
                  (assert (not flattening); (* flattening mode must be off. *)
-                  assert (not (List.null stack));     (* since flattening mode is off, the stack must be empty. *)
+                  assert (List.null stack);     (* since flattening mode is off, the stack must be empty. *)
                   Output.char (#channel(state)) #"\n";
                   let
                       val i = !(#indent1(state))
@@ -792,9 +792,9 @@ functor PPrintRenderer (Output : OUTPUT) =
 
                 (case stack of
                      [] => Output.char (#channel(state)) c
-                   | _ => (#output(state) := OChar (c, (!(#output(state))));
-                           #column(state) := !(#column(state)) + 1;
-                           shift stack state))
+                   | _ => #output(state) := OChar (c, (!(#output(state))));
+                 #column(state) := !(#column(state)) + 1;
+                 shift stack state)
                     
             (* [emit_string] prints a string (either to the output channel or to the *)
             (*      output buffer), updates the current column, discards the first piece of *)
@@ -803,9 +803,9 @@ functor PPrintRenderer (Output : OUTPUT) =
             and emit_string stack state s ofs len =
                 (case stack of
                      [] => Output.substring (#channel(state)) s ofs len
-                   | _ => (#output(state) := OString (s, ofs, len, (!(#output(state))));
-                           #column(state) := !(#column(state)) + len;
-                           shift stack state))
+                   | _ => #output(state) := OString (s, ofs, len, (!(#output(state))));
+                 #column(state) := !(#column(state)) + len;
+                 shift stack state)
                     
             (* [emit_blanks] prints a blank string (either to the output channel or to *)
             (*      the output buffer), updates the current column, discards the first piece *)
